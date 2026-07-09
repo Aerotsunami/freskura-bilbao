@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Freskura — agua, sombra y aseos en Bilbao</title>
+<meta name="description" content="Fuentes de agua potable, duchas, aseos públicos y sombra de Bilbao en un mapa. Para gente corredora y turista. Datos abiertos del Ayuntamiento de Bilbao y OpenStreetMap.">
+<meta name="theme-color" content="#0d9488">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  /* ── Paleta: verdes, amarillos, turquesas y celestes ── */
+  :root{
+    --bg:#f0f7f3;            /* menta muy claro          */
+    --surface:#ffffff;
+    --ink:#173d33;            /* verde bosque oscuro      */
+    --muted:#5d7a70;
+    --line:#d9ebe2;
+    --teal:#0d9488;           /* turquesa principal       */
+    --teal-deep:#0f766e;
+    --sky:#0ea5e9;            /* celeste (agua)           */
+    --sky-deep:#0369a1;
+    --cyan:#06b6d4;           /* duchas                   */
+    --amber:#f59e0b;          /* amarillo (aseos)         */
+    --amber-deep:#b45309;
+    --leaf:#4ade80;           /* verde hoja (sombra)      */
+    --leaf-deep:#15803d;
+    --radius:14px;
+    --shadow:0 1px 4px rgba(13,79,66,.14);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  body{display:flex;flex-direction:column;min-height:100vh}
+
+  header{background:linear-gradient(120deg,var(--teal-deep) 0%,var(--teal) 45%,var(--sky) 100%);
+    color:#f0fdfa;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.3px}
+  header .sub{font-size:11.5px;opacity:.85;display:block;font-weight:400}
+  .lang{display:flex;border:1px solid rgba(240,253,250,.45);border-radius:8px;overflow:hidden;margin-left:auto}
+  .lang button{background:none;border:none;color:#f0fdfa;padding:4px 10px;font-size:12.5px;cursor:pointer;font-weight:600}
+  .lang button[aria-pressed="true"]{background:#f0fdfa;color:var(--teal-deep)}
+  #tempChip{background:rgba(240,253,250,.18);border:1px solid rgba(240,253,250,.35);
+    border-radius:999px;padding:3px 12px;font-size:12.5px;font-weight:600;white-space:nowrap}
+
+  #heat{display:none;background:#fefce8;border-bottom:1px solid #fde68a;color:#854d0e;
+    padding:8px 16px;font-size:13px;text-align:center}
+
+  #mapwrap{position:relative}
+  #map{height:56vh;min-height:340px;width:100%;background:#e2efe8}
+  @media(min-width:900px){#map{height:62vh}}
+  #locBtn{position:absolute;right:10px;bottom:14px;z-index:800;
+    background:var(--sky);color:#fff;border:none;border-radius:999px;
+    padding:10px 16px;font-size:13.5px;font-weight:650;cursor:pointer;
+    box-shadow:0 2px 8px rgba(3,105,161,.4);display:flex;gap:6px;align-items:center}
+  #locBtn:active{transform:scale(.97)}
+
+  /* ── Leyenda bajo el mapa ── */
+  #legend{background:var(--surface);border-bottom:1px solid var(--line);
+    padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    font-size:13.5px;box-shadow:var(--shadow);position:relative;z-index:500}
+  #legend label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  #legend input{accent-color:var(--teal)}
+  .dot{width:13px;height:13px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1.5px var(--line)}
+  .dot.agua{background:var(--sky)} .dot.ducha{background:var(--cyan)}
+  .dot.aseo{background:var(--amber)} .dot.sombra{background:var(--leaf)}
+  .sep{width:1px;height:20px;background:var(--line)}
+  .preset{border:1.5px solid var(--teal);background:none;color:var(--teal-deep);
+    border-radius:999px;padding:4px 13px;font-size:12.5px;font-weight:650;cursor:pointer}
+  .preset[aria-pressed="true"]{background:var(--teal);color:#fff}
+
+  main{flex:1;max-width:1080px;width:100%;margin:0 auto;padding:16px}
+  h2{font-size:15px;margin:14px 0 10px;font-weight:700}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;box-shadow:var(--shadow)}
+  .card .num{font-size:24px;font-weight:750;line-height:1.15}
+  .card .lbl{font-size:12px;color:var(--muted);margin-top:3px}
+  .card.agua .num{color:var(--sky-deep)}
+  .card.ducha .num{color:var(--cyan)}
+  .card.aseo .num{color:var(--amber-deep)}
+  .card.temp .num{color:var(--teal-deep)}
+  #hint{background:linear-gradient(120deg,#ecfdf5,#f0f9ff);border:1px solid var(--line);
+    border-radius:var(--radius);padding:12px 16px;font-size:13.5px;margin-top:12px;line-height:1.55}
+
+  footer{font-size:11px;color:var(--muted);text-align:center;padding:14px 16px 22px;line-height:1.6}
+  footer a{color:var(--teal-deep);text-decoration:none}
+
+  .mk{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
+    border-radius:50%;background:#fff;font-size:13px;
+    box-shadow:0 1px 4px rgba(13,79,66,.35)}
+  .mk.agua{border:2.5px solid var(--sky)} .mk.ducha{border:2.5px solid var(--cyan)}
+  .mk.aseo{border:2.5px solid var(--amber)}
+  .leaflet-popup-content{font-size:13px;line-height:1.5;margin:10px 14px}
+  .leaflet-popup-content b{font-size:14px}
+  .prop{color:var(--muted)}
+  .tag{display:inline-block;background:#ecfdf5;border:1px solid var(--line);border-radius:6px;
+    padding:1px 7px;font-size:11.5px;margin:2px 3px 0 0;color:var(--ink)}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🌿 Freskura <span class="sub" data-i18n="tagline">Agua, sombra y aseos en Bilbao</span></h1>
+  </div>
+  <span id="tempChip">…</span>
+  <div class="lang" role="group" aria-label="Language">
+    <button id="langEs" aria-pressed="true" onclick="setLang('es')">ES</button>
+    <button id="langEu" aria-pressed="false" onclick="setLang('eu')">EU</button>
+    <button id="langEn" aria-pressed="false" onclick="setLang('en')">EN</button>
+  </div>
+</header>
+
+<div id="heat"></div>
+
+<div id="mapwrap">
+  <div id="map" role="application" aria-label="Map"></div>
+  <button id="locBtn">💧 <span data-i18n="nearWater">Agua más cercana</span></button>
+</div>
+
+<section id="legend" aria-label="Legend">
+  <button class="preset" id="pRun" aria-pressed="false">🏃 <span data-i18n="runner">Modo corredor</span></button>
+  <button class="preset" id="pTour" aria-pressed="false">🧳 <span data-i18n="tourist">Modo turista</span></button>
+  <span class="sep" aria-hidden="true"></span>
+  <label><span class="dot agua"></span><input type="checkbox" id="fAgua" checked> <span data-i18n="water">Fuentes</span></label>
+  <label><span class="dot ducha"></span><input type="checkbox" id="fDucha"> <span data-i18n="showers">Duchas</span></label>
+  <label><span class="dot aseo"></span><input type="checkbox" id="fAseo" checked> <span data-i18n="toilets">Aseos</span></label>
+  <label><span class="dot sombra"></span><input type="checkbox" id="fSombra" checked> <span data-i18n="shade">Sombra</span></label>
+</section>
+
+<main>
+  <h2 data-i18n="statsTitle">En el mapa</h2>
+  <div class="stats">
+    <div class="card agua"><div class="num" id="nAgua">–</div><div class="lbl" data-i18n="waterN">fuentes de agua potable</div></div>
+    <div class="card ducha"><div class="num" id="nDucha">–</div><div class="lbl" data-i18n="showersN">duchas urbanas</div></div>
+    <div class="card aseo"><div class="num" id="nAseo">–</div><div class="lbl" data-i18n="toiletsN">aseos públicos (OSM)</div></div>
+    <div class="card temp"><div class="num" id="nTemp">–</div><div class="lbl" id="tempLbl" data-i18n="tempN">ahora en Bilbao</div></div>
+  </div>
+  <div id="hint" data-i18n="hintTxt">La capa de sombra muestra el arbolado urbano (35.570 árboles) y las zonas verdes oficiales: los corredores más frescos para correr o pasear.</div>
+</main>
+
+<footer>
+  <span data-i18n="dataBy">Datos abiertos:</span>
+  <a href="https://www.geobilbao.eus" target="_blank" rel="noopener">GeoBilbao · Ayuntamiento de Bilbao</a>
+  (fuentes, duchas, arbolado, zonas verdes) ·
+  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (aseos, mapa) ·
+  <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (tiempo)
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+
+/* ═══════════ i18n ═══════════ */
+const I18N = {
+  es: {
+    tagline:"Agua, sombra y aseos en Bilbao",
+    runner:"Modo corredor", tourist:"Modo turista",
+    water:"Fuentes", showers:"Duchas", toilets:"Aseos", shade:"Sombra",
+    statsTitle:"En el mapa",
+    waterN:"fuentes de agua potable", showersN:"duchas urbanas",
+    toiletsN:"aseos públicos (OSM)", tempN:"ahora en Bilbao",
+    feels:"sensación", nearWater:"Agua más cercana",
+    heatMsg:"Hace calor ({t}°). Sigue los corredores de sombra y bebe agua a menudo.",
+    hintTxt:"La capa de sombra muestra el arbolado urbano (35.570 árboles) y las zonas verdes oficiales: los corredores más frescos para correr o pasear.",
+    fountain:"Fuente de agua potable", fountainMix:"Fuente mixta", shower:"Ducha urbana",
+    toilet:"Aseo público", free:"gratis", paid:"de pago", wheelchair:"accesible ♿",
+    drinkingToo:"con agua potable",
+    district:"Distrito", barrio:"Barrio",
+    youAre:"Estás aquí", away:"a {d} m",
+    geoErr:"No se pudo obtener tu ubicación",
+    noWater:"Activa la capa de fuentes primero",
+  },
+  eu: {
+    tagline:"Ura, itzala eta komunak Bilbon",
+    runner:"Korrikalari modua", tourist:"Turista modua",
+    water:"Iturriak", showers:"Dutxak", toilets:"Komunak", shade:"Itzala",
+    statsTitle:"Mapan",
+    waterN:"edateko ur-iturri", showersN:"hiri-dutxa",
+    toiletsN:"komun publiko (OSM)", tempN:"orain Bilbon",
+    feels:"sentitzen da", nearWater:"Urik hurbilena",
+    heatMsg:"Bero egiten du ({t}°). Itzal-korridoreei jarraitu eta ura sarri edan.",
+    hintTxt:"Itzal-geruzak hiriko zuhaiztia (35.570 zuhaitz) eta gune berde ofizialak erakusten ditu: korridorerik freskoenak korrika egiteko edo paseatzeko.",
+    fountain:"Edateko iturria", fountainMix:"Iturri mistoa", shower:"Hiri-dutxa",
+    toilet:"Komun publikoa", free:"doakoa", paid:"ordainpekoa", wheelchair:"irisgarria ♿",
+    drinkingToo:"edateko urarekin",
+    district:"Barrutia", barrio:"Auzoa",
+    youAre:"Hemen zaude", away:"{d} m-ra",
+    geoErr:"Ezin izan da zure kokapena lortu",
+    noWater:"Aktibatu iturrien geruza lehenik",
+  },
+  en: {
+    tagline:"Water, shade & toilets in Bilbao",
+    runner:"Runner mode", tourist:"Tourist mode",
+    water:"Fountains", showers:"Showers", toilets:"Toilets", shade:"Shade",
+    statsTitle:"On the map",
+    waterN:"drinking fountains", showersN:"urban showers",
+    toiletsN:"public toilets (OSM)", tempN:"now in Bilbao",
+    feels:"feels like", nearWater:"Nearest water",
+    heatMsg:"It's hot ({t}°). Follow the shade corridors and drink often.",
+    hintTxt:"The shade layer shows the city's 35,570 street trees and official green areas — the coolest corridors for running or walking.",
+    fountain:"Drinking fountain", fountainMix:"Mixed fountain", shower:"Urban shower",
+    toilet:"Public toilet", free:"free", paid:"paid", wheelchair:"wheelchair ♿",
+    drinkingToo:"with drinking water",
+    district:"District", barrio:"Neighbourhood",
+    youAre:"You are here", away:"{d} m away",
+    geoErr:"Couldn't get your location",
+    noWater:"Turn on the fountains layer first",
+  },
+};
+let lang = localStorage.getItem("fk-lang") || "es";
+if (!I18N[lang]) lang = "es";
+const t = k => (I18N[lang] && I18N[lang][k]) || I18N.es[k] || k;
+
+function applyStatic() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+  for (const l of ["es", "eu", "en"]) {
+    const b = document.getElementById("lang" + l[0].toUpperCase() + l.slice(1));
+    if (b) b.setAttribute("aria-pressed", String(lang === l));
+  }
+}
+function setLang(l) { lang = l; localStorage.setItem("fk-lang", l); applyStatic(); render(); renderWeather(); }
+
+/* ═══════════ Fuentes de datos ═══════════ */
+const WFS_FUENTES = "https://www.geobilbao.eus/geobilbao/Main"
+  + "?gsservice=Ls&gsrequest=WFS&idservice=OyS_Aguas"
+  + "&SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature"
+  + "&OUTPUTFORMAT=application/json&SRSNAME=EPSG:4326&TYPENAMES=OyS_Aguas:Fuentes";
+const WMS_BASE = "https://www.geobilbao.eus/geobilbao/Main?gsservice=Ls&gsrequest=WMS&idservice=";
+const OVERPASS = "https://overpass-api.de/api/interpreter";
+const OVERPASS_Q = '[out:json][timeout:25];(node["amenity"="toilets"](43.21,-3.02,43.30,-2.85);way["amenity"="toilets"](43.21,-3.02,43.30,-2.85););out center;';
+const METEO = "https://api.open-meteo.com/v1/forecast?latitude=43.263&longitude=-2.935&current=temperature_2m,apparent_temperature&timezone=Europe%2FMadrid";
+const HEAT_ON = 27;          /* °C sensación para modo calor */
+const TOILETS_TTL = 7 * 24 * 3600 * 1000;
+
+/* ═══════════ Mapa ═══════════ */
+const map = L.map("map", { zoomControl: true }).setView([43.2609, -2.9349], 14);
+map.attributionControl.setPrefix(false);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19, attribution: "© OpenStreetMap contributors",
+}).addTo(map);
+
+/* Sombra: zonas verdes + arbolado municipales vía WMS */
+const wmsVerde = L.tileLayer.wms(WMS_BASE + "Mam_Biodiversidad", {
+  layers: "VerdeUrbano", format: "image/png", transparent: true, opacity: 0.35 });
+const wmsArbolado = L.tileLayer.wms(WMS_BASE + "OyS_ParquesJardines", {
+  layers: "Arbolado", format: "image/png", transparent: true, opacity: 0.55 });
+
+const gAgua = L.layerGroup(), gDucha = L.layerGroup(), gAseo = L.layerGroup();
+let fuentes = [], duchas = [], aseos = [], userMarker = null;
+
+const haversine = (a, b) => {
+  const R = 6371000, r = Math.PI / 180;
+  const s = Math.sin((b.lat-a.lat)*r/2)**2 + Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin((b.lng-a.lng)*r/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+};
+const firstCoord = g => { let c = g.coordinates; while (Array.isArray(c[0])) c = c[0]; return { lng:c[0], lat:c[1] }; };
+
+const mk = (cls, emoji) => L.divIcon({
+  className: "", html: `<div class="mk ${cls}">${emoji}</div>`,
+  iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -12],
+});
+
+const cap = s => { s = (s || "").toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); };
+
+function fuentePopup(f) {
+  const type = f.tipo === "D" ? t("shower") : f.tipo === "M" ? t("fountainMix") : t("fountain");
+  const loc = [f.barrio && `${t("barrio")}: ${cap(f.barrio)}`, f.distrito && `${t("district")}: ${cap(f.distrito)}`]
+    .filter(Boolean).join("<br>");
+  return `<b>${type}</b><br><span class="prop">${loc}</span>`;
+}
+function aseoPopup(a) {
+  const tags = [];
+  if (a.fee === "no") tags.push(t("free"));
+  if (a.fee === "yes") tags.push(t("paid"));
+  if (a.wheelchair === "yes") tags.push(t("wheelchair"));
+  if (a.drinking === "yes") tags.push(t("drinkingToo"));
+  return `<b>${t("toilet")}</b>` + (a.name ? `<br><span class="prop">${a.name}</span>` : "")
+    + (tags.length ? `<br>` + tags.map(x => `<span class="tag">${x}</span>`).join("") : "");
+}
+
+/* ═══════════ Render ═══════════ */
+function render() {
+  gAgua.clearLayers(); gDucha.clearLayers(); gAseo.clearLayers();
+  for (const f of fuentes)
+    gAgua.addLayer(L.marker([f.lat, f.lng], { icon: mk("agua", "💧") }).bindPopup(() => fuentePopup(f)));
+  for (const f of duchas)
+    gDucha.addLayer(L.marker([f.lat, f.lng], { icon: mk("ducha", "🚿") }).bindPopup(() => fuentePopup(f)));
+  for (const a of aseos)
+    gAseo.addLayer(L.marker([a.lat, a.lng], { icon: mk("aseo", "🚻") }).bindPopup(() => aseoPopup(a)));
+
+  document.getElementById("nAgua").textContent = fuentes.length || "–";
+  document.getElementById("nDucha").textContent = duchas.length || "–";
+  document.getElementById("nAseo").textContent = aseos.length || "–";
+  applyLayers();
+}
+
+function applyLayers() {
+  const on = (box, layer) => document.getElementById(box).checked ? map.addLayer(layer) : map.removeLayer(layer);
+  on("fAgua", gAgua); on("fDucha", gDucha); on("fAseo", gAseo);
+  if (document.getElementById("fSombra").checked) { map.addLayer(wmsVerde); map.addLayer(wmsArbolado); }
+  else { map.removeLayer(wmsVerde); map.removeLayer(wmsArbolado); }
+}
+
+function setPreset(agua, ducha, aseo, sombra, btn) {
+  document.getElementById("fAgua").checked = agua;
+  document.getElementById("fDucha").checked = ducha;
+  document.getElementById("fAseo").checked = aseo;
+  document.getElementById("fSombra").checked = sombra;
+  document.getElementById("pRun").setAttribute("aria-pressed", String(btn === "run"));
+  document.getElementById("pTour").setAttribute("aria-pressed", String(btn === "tour"));
+  applyLayers();
+}
+document.getElementById("pRun").onclick = () => setPreset(true, true, false, true, "run");
+document.getElementById("pTour").onclick = () => setPreset(true, false, true, false, "tour");
+for (const id of ["fAgua", "fDucha", "fAseo", "fSombra"])
+  document.getElementById(id).addEventListener("change", () => {
+    document.getElementById("pRun").setAttribute("aria-pressed", "false");
+    document.getElementById("pTour").setAttribute("aria-pressed", "false");
+    applyLayers();
+  });
+
+/* ═══════════ Carga de datos ═══════════ */
+async function loadFuentes() {
+  try {
+    const j = await fetch(WFS_FUENTES, { cache: "no-store" }).then(r => r.json());
+    const all = (j.features || []).filter(f => f.geometry).map(f => {
+      const { lat, lng } = firstCoord(f.geometry);
+      return { lat, lng, tipo: f.properties.Tipo, barrio: f.properties.Barrio, distrito: f.properties.Distrito };
+    });
+    fuentes = all.filter(f => f.tipo === "C" || f.tipo === "M");
+    duchas  = all.filter(f => f.tipo === "D");
+    try { localStorage.setItem("fk-fuentes", JSON.stringify({ when: Date.now(), fuentes, duchas })); } catch (e) {}
+  } catch (e) {
+    try {
+      const s = JSON.parse(localStorage.getItem("fk-fuentes") || "null");
+      if (s) { fuentes = s.fuentes; duchas = s.duchas; }
+    } catch (err) {}
+  }
+  render();
+}
+
+async function loadAseos() {
+  try {
+    const s = JSON.parse(localStorage.getItem("fk-aseos") || "null");
+    if (s && Date.now() - s.when < TOILETS_TTL) { aseos = s.aseos; render(); return; }
+  } catch (e) {}
+  try {
+    const j = await fetch(OVERPASS, {
+      method: "POST",
+      body: "data=" + encodeURIComponent(OVERPASS_Q),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    }).then(r => r.json());
+    aseos = (j.elements || []).map(e => ({
+      lat: e.lat ?? e.center?.lat, lng: e.lon ?? e.center?.lon,
+      name: e.tags?.name || "", fee: e.tags?.fee || "",
+      wheelchair: e.tags?.wheelchair || "", drinking: e.tags?.drinking_water || "",
+    })).filter(a => a.lat && a.lng);
+    try { localStorage.setItem("fk-aseos", JSON.stringify({ when: Date.now(), aseos })); } catch (e) {}
+  } catch (e) {
+    try { const s = JSON.parse(localStorage.getItem("fk-aseos") || "null"); if (s) aseos = s.aseos; } catch (err) {}
+  }
+  render();
+}
+
+let weather = null;
+async function loadWeather() {
+  try { weather = (await fetch(METEO).then(r => r.json())).current; } catch (e) {}
+  renderWeather();
+}
+function renderWeather() {
+  const chip = document.getElementById("tempChip");
+  const heat = document.getElementById("heat");
+  if (!weather) { chip.textContent = "–"; heat.style.display = "none"; return; }
+  const T = Math.round(weather.temperature_2m), F = Math.round(weather.apparent_temperature);
+  chip.textContent = `${T}° · ${t("feels")} ${F}°`;
+  document.getElementById("nTemp").textContent = T + "°";
+  if (F >= HEAT_ON) {
+    heat.textContent = "☀️ " + t("heatMsg").replace("{t}", F);
+    heat.style.display = "block";
+    document.getElementById("fSombra").checked = true;
+    applyLayers();
+  } else heat.style.display = "none";
+}
+
+/* ═══════════ Agua más cercana ═══════════ */
+document.getElementById("locBtn").onclick = () => {
+  if (!fuentes.length) { alert(t("noWater")); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const me = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    let best = null, bd = Infinity;
+    for (const f of [...fuentes, ...(document.getElementById("fDucha").checked ? duchas : [])]) {
+      const d = haversine(me, f);
+      if (d < bd) { bd = d; best = f; }
+    }
+    if (!best) return;
+    if (userMarker) map.removeLayer(userMarker);
+    userMarker = L.circleMarker([me.lat, me.lng], {
+      radius: 8, color: "#fff", weight: 2.5, fillColor: "#0f766e", fillOpacity: 1,
+    }).addTo(map).bindPopup(`<b>${t("youAre")}</b>`);
+    document.getElementById("fAgua").checked = true; applyLayers();
+    map.fitBounds(L.latLngBounds([[me.lat, me.lng], [best.lat, best.lng]]).pad(0.35));
+    L.popup().setLatLng([best.lat, best.lng])
+      .setContent(fuentePopup(best) + `<br><span class="prop">📍 ${t("away").replace("{d}", Math.round(bd))}</span>`)
+      .openOn(map);
+  }, () => alert(t("geoErr")), { enableHighAccuracy: true, timeout: 10000 });
+};
+
+/* ═══════════ Init ═══════════ */
+applyStatic();
+applyLayers();
+loadFuentes();
+loadAseos();
+loadWeather();
+setInterval(loadWeather, 15 * 60 * 1000);
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
