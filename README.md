@@ -24,7 +24,10 @@ dónde hay sombra y dónde encontrar un aseo en Bilbao.
 - **«Agua más cercana»**: geolocalización → vuela a la fuente más próxima con la distancia
 - **Modo calor**: con sensación térmica ≥ 27° (Open-Meteo) aparece el aviso y se activan
   automáticamente las capas de sombra y refugios climáticos
-- **Aseos robustos**: tres espejos de Overpass con reintento automático y caché local
+- **Aseos robustos**: tres espejos de Overpass con reintento automático, caché local
+  y un respaldo integrado de 114 aseos — la capa nunca queda vacía
+- **Tema claro / oscuro** (🌙/☀️): mapas CARTO Voyager y Dark Matter, paleta adaptada,
+  se recuerda la preferencia y respeta `prefers-color-scheme`
 - ES / EU / EN, PWA instalable, funciona sin conexión con los últimos datos guardados
 - Paleta: verdes, amarillos, turquesas y celestes; leyenda y estadísticas bajo el mapa
 

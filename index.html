@@ -11,24 +11,63 @@
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  /* ── Paleta nocturna: verdes, amarillos, turquesas y celestes ── */
+  /* ── Paleta: verdes, amarillos, turquesas y celestes (claro + oscuro) ── */
   :root{
-    --bg:#0b1512;             /* verde-negro profundo     */
-    --surface:#132019;        /* tarjetas                 */
-    --ink:#e8f5ee;            /* texto claro menta        */
+    --bg:#f0f7f3;
+    --surface:#ffffff;
+    --ink:#173d33;
+    --muted:#5d7a70;
+    --line:#d9ebe2;
+    --teal:#0d9488;
+    --teal-deep:#0f766e;
+    --sky:#0ea5e9;
+    --sky-deep:#0369a1;
+    --cyan:#06b6d4;
+    --amber:#f59e0b;
+    --amber-deep:#b45309;
+    --leaf:#4ade80;
+    --leaf-deep:#15803d;
+    --radius:14px;
+    --shadow:0 1px 4px rgba(13,79,66,.14);
+    --head-grad:linear-gradient(120deg,#0f766e 0%,#0d9488 45%,#0ea5e9 100%);
+    --head-ink:#f0fdfa;
+    --head-contrast:#0f766e;
+    --heat-bg:#fefce8; --heat-line:#fde68a; --heat-ink:#854d0e;
+    --hint-grad:linear-gradient(120deg,#ecfdf5,#f0f9ff);
+    --map-bg:#e2efe8;
+    --mk-bg:#ffffff;
+    --tag-bg:#ecfdf5; --tag-ink:#173d33;
+    --hover:#eef7f2;
+    --attrib-bg:rgba(255,255,255,.75);
+    --preset-ink:#ffffff;
+  }
+  [data-theme="dark"]{
+    --bg:#0b1512;
+    --surface:#132019;
+    --ink:#e8f5ee;
     --muted:#96b3a6;
     --line:#24392f;
-    --teal:#14b8a6;           /* turquesa principal       */
-    --teal-deep:#5eead4;      /* turquesa claro (texto)   */
-    --sky:#38bdf8;            /* celeste (agua)           */
+    --teal:#14b8a6;
+    --teal-deep:#5eead4;
+    --sky:#38bdf8;
     --sky-deep:#7dd3fc;
-    --cyan:#22d3ee;           /* duchas                   */
-    --amber:#fbbf24;          /* amarillo (aseos)         */
+    --cyan:#22d3ee;
+    --amber:#fbbf24;
     --amber-deep:#fcd34d;
-    --leaf:#4ade80;           /* verde hoja (sombra)      */
+    --leaf:#4ade80;
     --leaf-deep:#86efac;
-    --radius:14px;
     --shadow:0 1px 5px rgba(0,0,0,.45);
+    --head-grad:linear-gradient(120deg,#0e3d38 0%,#11554e 45%,#0a4a6e 100%);
+    --head-ink:#ccfbf1;
+    --head-contrast:#0e3d38;
+    --heat-bg:#2a2108; --heat-line:#4d3f10; --heat-ink:#fcd34d;
+    --hint-grad:linear-gradient(120deg,#11251c,#0d2334);
+    --map-bg:#0e1a16;
+    --mk-bg:#132019;
+    --tag-bg:#1b2f26; --tag-ink:#cde9dc;
+    --hover:#1b2f26;
+    --attrib-bg:rgba(11,21,18,.75);
+    --preset-ink:#06251f;
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);
@@ -36,21 +75,23 @@
     -webkit-font-smoothing:antialiased}
   body{display:flex;flex-direction:column;min-height:100vh}
 
-  header{background:linear-gradient(120deg,#0e3d38 0%,#11554e 45%,#0a4a6e 100%);
-    color:#ccfbf1;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header{background:var(--head-grad);
+    color:var(--head-ink);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.3px}
   header .sub{font-size:11.5px;opacity:.85;display:block;font-weight:400}
   .lang{display:flex;border:1px solid rgba(240,253,250,.45);border-radius:8px;overflow:hidden;margin-left:auto}
-  .lang button{background:none;border:none;color:#f0fdfa;padding:4px 10px;font-size:12.5px;cursor:pointer;font-weight:600}
-  .lang button[aria-pressed="true"]{background:#ccfbf1;color:#0e3d38}
+  .lang button{background:none;border:none;color:var(--head-ink);padding:4px 10px;font-size:12.5px;cursor:pointer;font-weight:600}
+  .lang button[aria-pressed="true"]{background:var(--head-ink);color:var(--head-contrast)}
+  #themeBtn{background:none;border:1px solid rgba(240,253,250,.45);border-radius:8px;
+    color:var(--head-ink);padding:4px 10px;font-size:14px;cursor:pointer;line-height:1}
   #tempChip{background:rgba(240,253,250,.18);border:1px solid rgba(240,253,250,.35);
     border-radius:999px;padding:3px 12px;font-size:12.5px;font-weight:600;white-space:nowrap}
 
-  #heat{display:none;background:#2a2108;border-bottom:1px solid #4d3f10;color:#fcd34d;
+  #heat{display:none;background:var(--heat-bg);border-bottom:1px solid var(--heat-line);color:var(--heat-ink);
     padding:8px 16px;font-size:13px;text-align:center}
 
   #mapwrap{position:relative}
-  #map{height:56vh;min-height:340px;width:100%;background:#0e1a16}
+  #map{height:56vh;min-height:340px;width:100%;background:var(--map-bg)}
   @media(min-width:900px){#map{height:62vh}}
   #locBtn{position:absolute;right:10px;bottom:14px;z-index:800;
     background:var(--sky);color:#fff;border:none;border-radius:999px;
@@ -71,7 +112,7 @@
   .sep{width:1px;height:20px;background:var(--line)}
   .preset{border:1.5px solid var(--teal);background:none;color:var(--teal-deep);
     border-radius:999px;padding:4px 13px;font-size:12.5px;font-weight:650;cursor:pointer}
-  .preset[aria-pressed="true"]{background:var(--teal);color:#06251f}
+  .preset[aria-pressed="true"]{background:var(--teal);color:var(--preset-ink)}
 
   main{flex:1;max-width:1080px;width:100%;margin:0 auto;padding:16px}
   h2{font-size:15px;margin:14px 0 10px;font-weight:700}
@@ -84,29 +125,29 @@
   .card.ducha .num{color:var(--cyan)}
   .card.aseo .num{color:var(--amber-deep)}
   .card.temp .num{color:var(--teal-deep)}
-  #hint{background:linear-gradient(120deg,#11251c,#0d2334);border:1px solid var(--line);
+  #hint{background:var(--hint-grad);border:1px solid var(--line);
     border-radius:var(--radius);padding:12px 16px;font-size:13.5px;margin-top:12px;line-height:1.55}
 
   footer{font-size:11px;color:var(--muted);text-align:center;padding:14px 16px 22px;line-height:1.6}
   footer a{color:var(--teal-deep);text-decoration:none}
 
   .mk{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
-    border-radius:50%;background:#132019;font-size:13px;
-    box-shadow:0 1px 4px rgba(0,0,0,.6)}
+    border-radius:50%;background:var(--mk-bg);font-size:13px;
+    box-shadow:0 1px 4px rgba(0,0,0,.45)}
   .mk.agua{border:2.5px solid var(--sky)} .mk.ducha{border:2.5px solid var(--cyan)}
   .mk.aseo{border:2.5px solid var(--amber)} .mk.ref{border:2.5px solid var(--teal)}
   .leaflet-popup-content{font-size:13px;line-height:1.5;margin:10px 14px}
   .leaflet-popup-content b{font-size:14px}
   .prop{color:var(--muted)}
-  .tag{display:inline-block;background:#1b2f26;border:1px solid var(--line);border-radius:6px;
-    padding:1px 7px;font-size:11.5px;margin:2px 3px 0 0;color:#cde9dc}
+  .tag{display:inline-block;background:var(--tag-bg);border:1px solid var(--line);border-radius:6px;
+    padding:1px 7px;font-size:11.5px;margin:2px 3px 0 0;color:var(--tag-ink)}
 
-  /* ── Leaflet en oscuro ── */
+  /* ── Leaflet acorde al tema ── */
   .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--surface);color:var(--ink)}
   .leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
   .leaflet-bar a{background:var(--surface);color:var(--ink);border-bottom:1px solid var(--line)}
-  .leaflet-bar a:hover{background:#1b2f26}
-  .leaflet-control-attribution{background:rgba(11,21,18,.75)!important;color:var(--muted)}
+  .leaflet-bar a:hover{background:var(--hover)}
+  .leaflet-control-attribution{background:var(--attrib-bg)!important;color:var(--muted)}
   .leaflet-control-attribution a{color:var(--teal-deep)}
 </style>
 </head>
@@ -117,6 +158,7 @@
     <h1>🌿 Freskura <span class="sub" data-i18n="tagline">Agua, sombra y aseos en Bilbao</span></h1>
   </div>
   <span id="tempChip">…</span>
+  <button id="themeBtn" title="Tema claro/oscuro" aria-label="Toggle theme">🌙</button>
   <div class="lang" role="group" aria-label="Language">
     <button id="langEs" aria-pressed="true" onclick="setLang('es')">ES</button>
     <button id="langEu" aria-pressed="false" onclick="setLang('eu')">EU</button>
@@ -262,6 +304,17 @@ const OVERPASS_MIRRORS = [
   "https://overpass.private.coffee/api/interpreter",
 ];
 const OVERPASS_Q = '[out:json][timeout:20];(node["amenity"="toilets"](43.21,-3.02,43.30,-2.85);way["amenity"="toilets"](43.21,-3.02,43.30,-2.85););out center;';
+/* Respaldo integrado: 114 aseos de OSM (09/07/2026), formato lat,lng[,flags] f=gratis p=pago w=accesible d=agua */
+const ASEOS_FALLBACK = "43.25841,-2.92070,fwd;43.21071,-2.89803;43.29033,-3.00364;43.29275,-3.00127,fw;43.29668,-2.98625,fw;43.26818,-2.94733,fw;43.28822,-2.99911;43.29970,-2.99906,f;43.24633,-2.89137;43.28693,-2.99386,fw;43.24999,-2.88278;43.26610,-2.92663,fwd;43.26661,-2.94020,fwd;43.26066,-2.92332,fwd;43.29496,-3.00363,fw;43.28165,-2.96185,fwd;43.22109,-2.87640;43.23324,-2.89242;43.23024,-2.89079,w;43.29205,-2.98887;43.29131,-2.98890,fw;43.23939,-2.91857,fw;43.27170,-2.94562,pw;43.29377,-2.99560,fw;43.29656,-2.99629;43.26763,-2.93672,fwd;43.28560,-2.98148;43.28138,-2.98667;43.26790,-2.94052,f;43.25542,-2.92430,fw;43.25984,-2.92808,f;43.26033,-2.95004;43.25944,-2.93722,fw;43.26048,-2.94113,fwd;43.26674,-2.96134,fwd;43.24563,-2.94872,f;43.25141,-2.94528,f;43.24761,-2.88472,w;43.26315,-3.01475,f;43.25475,-2.94330,fwd;43.28935,-2.97596,fw;43.27394,-2.95807,fwd;43.27236,-2.94510,fwd;43.26661,-2.94017,fwd;43.26872,-2.93576,fwd;43.28549,-2.97941,fw;43.28110,-2.98322;43.29964,-2.98856;43.29963,-2.98857;43.25779,-2.85186,w;43.28126,-2.86187;43.22142,-2.88665;43.25239,-2.88682;43.26862,-2.93418,fw;43.25537,-2.92419,fw;43.25311,-2.91921,f;43.25781,-2.85192,w;43.26700,-2.94155;43.24741,-2.89391,fwd;43.27188,-2.96371,fw;43.28765,-2.98287;43.25571,-2.92489,fw;43.26113,-2.94929,f;43.28826,-3.00041;43.26289,-2.94911,fw;43.23811,-2.88513;43.28436,-2.86565;43.29664,-2.89050;43.26266,-2.91902,fwd;43.26529,-2.94229,fwd;43.29197,-2.89013;43.26738,-2.91435,wd;43.26576,-2.91949,fwd;43.27671,-2.97580,fwd;43.24196,-2.92317,fwd;43.26885,-2.95624,fwd;43.27647,-2.96148,fwd;43.28306,-2.96423,fwd;43.27619,-2.96984,fwd;43.26507,-2.95321,fwd;43.25782,-2.96319,fwd;43.25965,-2.95161,fwd;43.26388,-2.92567,fwd;43.26043,-2.91933,fwd;43.25894,-2.91337,fwd;43.25683,-2.93455,fwd;43.26064,-2.90493,fwd;43.26000,-2.90082,fwd;43.25500,-2.90334,d;43.25374,-2.90521,fd;43.25372,-2.90946,fwd;43.25133,-2.92141,fwd;43.24426,-2.92478,fwd;43.24757,-2.93038,fwd;43.25195,-2.92793,fwd;43.25423,-2.93950,fwd;43.24937,-2.93823,fwd;43.24753,-2.94883,fwd;43.24491,-2.94407,fwd;43.23877,-2.94843,fwd;43.27642,-2.96301,fwd;43.27388,-2.94736,fwd;43.27463,-2.92059,fwd;43.25717,-2.94842,fwd;43.29375,-2.88796;43.29478,-2.88506,fw;43.25956,-2.96392;43.26700,-2.94151,w;43.29858,-2.97830;43.29586,-2.97772;43.29743,-2.88005,fw;43.26865,-2.96020,fwd;43.26043,-2.95418,fwd;43.24851,-2.91488,fwd";
+function parseAseosFallback() {
+  return ASEOS_FALLBACK.split(";").map(s => {
+    const [lat, lng, f = ""] = s.split(",");
+    return { lat: +lat, lng: +lng, name: "",
+      fee: f.includes("f") ? "no" : f.includes("p") ? "yes" : "",
+      wheelchair: f.includes("w") ? "yes" : "",
+      drinking: f.includes("d") ? "yes" : "" };
+  });
+}
 const METEO = "https://api.open-meteo.com/v1/forecast?latitude=43.263&longitude=-2.935&current=temperature_2m,apparent_temperature&timezone=Europe%2FMadrid";
 const HEAT_ON = 27;          /* °C sensación para modo calor */
 const TOILETS_TTL = 7 * 24 * 3600 * 1000;
@@ -269,10 +322,30 @@ const TOILETS_TTL = 7 * 24 * 3600 * 1000;
 /* ═══════════ Mapa ═══════════ */
 const map = L.map("map", { zoomControl: true }).setView([43.2609, -2.9349], 14);
 map.attributionControl.setPrefix(false);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-  maxZoom: 19, subdomains: "abcd",
-  attribution: "© OpenStreetMap contributors © CARTO",
-}).addTo(map);
+const cartoTiles = style => L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/" + style + "/{z}/{x}/{y}{r}.png",
+  { maxZoom: 19, subdomains: "abcd", attribution: "© OpenStreetMap contributors © CARTO" });
+const tileLight = cartoTiles("rastertiles/voyager");
+const tileDark = cartoTiles("dark_all");
+
+/* ── Tema claro / oscuro ── */
+let theme = localStorage.getItem("fk-theme")
+  || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", theme);
+  document.getElementById("themeBtn").textContent = theme === "dark" ? "☀️" : "🌙";
+  document.querySelector('meta[name="theme-color"]')
+    .setAttribute("content", theme === "dark" ? "#11554e" : "#0d9488");
+  const [add, rm] = theme === "dark" ? [tileDark, tileLight] : [tileLight, tileDark];
+  if (map.hasLayer(rm)) map.removeLayer(rm);
+  if (!map.hasLayer(add)) map.addLayer(add);
+}
+document.getElementById("themeBtn").onclick = () => {
+  theme = theme === "dark" ? "light" : "dark";
+  localStorage.setItem("fk-theme", theme);
+  applyTheme();
+};
+applyTheme();
 
 /* Sombra: zonas verdes + arbolado municipales vía WMS */
 const wmsVerde = L.tileLayer.wms(WMS_BASE + "Mam_Biodiversidad", {
@@ -439,8 +512,9 @@ async function loadAseos() {
       }
     } catch (e) { /* siguiente espejo */ }
   }
-  /* nada: usar caché aunque caducada, y reintentar en 60 s */
-  try { const s = JSON.parse(localStorage.getItem("fk-aseos") || "null"); if (s) aseos = s.aseos; } catch (err) {}
+  /* nada: caché caducada o respaldo integrado, y reintento en 60 s */
+  try { const s = JSON.parse(localStorage.getItem("fk-aseos") || "null"); if (s && s.aseos.length) aseos = s.aseos; } catch (err) {}
+  if (!aseos.length) aseos = parseAseosFallback();
   render();
   setTimeout(loadAseos, 60000);
 }
@@ -492,6 +566,8 @@ document.getElementById("locBtn").onclick = () => {
 /* ═══════════ Init ═══════════ */
 applyStatic();
 applyLayers();
+aseos = parseAseosFallback();   /* visible al instante; Overpass lo refresca */
+render();
 loadFuentes();
 loadRefugios();
 loadAseos();
