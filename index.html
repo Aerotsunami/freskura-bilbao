@@ -67,6 +67,7 @@
   .dot{width:13px;height:13px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1.5px var(--line)}
   .dot.agua{background:var(--sky)} .dot.ducha{background:var(--cyan)}
   .dot.aseo{background:var(--amber)} .dot.sombra{background:var(--leaf)}
+  .dot.ref{background:var(--teal)}
   .sep{width:1px;height:20px;background:var(--line)}
   .preset{border:1.5px solid var(--teal);background:none;color:var(--teal-deep);
     border-radius:999px;padding:4px 13px;font-size:12.5px;font-weight:650;cursor:pointer}
@@ -93,7 +94,7 @@
     border-radius:50%;background:#fff;font-size:13px;
     box-shadow:0 1px 4px rgba(13,79,66,.35)}
   .mk.agua{border:2.5px solid var(--sky)} .mk.ducha{border:2.5px solid var(--cyan)}
-  .mk.aseo{border:2.5px solid var(--amber)}
+  .mk.aseo{border:2.5px solid var(--amber)} .mk.ref{border:2.5px solid var(--teal)}
   .leaflet-popup-content{font-size:13px;line-height:1.5;margin:10px 14px}
   .leaflet-popup-content b{font-size:14px}
   .prop{color:var(--muted)}
@@ -130,6 +131,7 @@
   <label><span class="dot ducha"></span><input type="checkbox" id="fDucha"> <span data-i18n="showers">Duchas</span></label>
   <label><span class="dot aseo"></span><input type="checkbox" id="fAseo" checked> <span data-i18n="toilets">Aseos</span></label>
   <label><span class="dot sombra"></span><input type="checkbox" id="fSombra" checked> <span data-i18n="shade">Sombra</span></label>
+  <label><span class="dot ref"></span><input type="checkbox" id="fRef"> <span data-i18n="refuges">Refugios climáticos</span></label>
 </section>
 
 <main>
@@ -138,6 +140,7 @@
     <div class="card agua"><div class="num" id="nAgua">–</div><div class="lbl" data-i18n="waterN">fuentes de agua potable</div></div>
     <div class="card ducha"><div class="num" id="nDucha">–</div><div class="lbl" data-i18n="showersN">duchas urbanas</div></div>
     <div class="card aseo"><div class="num" id="nAseo">–</div><div class="lbl" data-i18n="toiletsN">aseos públicos (OSM)</div></div>
+    <div class="card ref"><div class="num" id="nRef" style="color:var(--teal-deep)">–</div><div class="lbl" data-i18n="refugesN">refugios climáticos oficiales</div></div>
     <div class="card temp"><div class="num" id="nTemp">–</div><div class="lbl" id="tempLbl" data-i18n="tempN">ahora en Bilbao</div></div>
   </div>
   <div id="hint" data-i18n="hintTxt">La capa de sombra muestra el arbolado urbano (35.570 árboles) y las zonas verdes oficiales: los corredores más frescos para correr o pasear.</div>
@@ -167,6 +170,9 @@ const I18N = {
     feels:"sensación", nearWater:"Agua más cercana",
     heatMsg:"Hace calor ({t}°). Sigue los corredores de sombra y bebe agua a menudo.",
     hintTxt:"La capa de sombra muestra el arbolado urbano (35.570 árboles) y las zonas verdes oficiales: los corredores más frescos para correr o pasear.",
+    refuges:"Refugios climáticos", refugesN:"refugios climáticos oficiales",
+    refuge:"Refugio climático", refInt:"Refugio interior (edificio)", refExt:"Refugio exterior (zona verde)",
+    hours:"Horario",
     fountain:"Fuente de agua potable", fountainMix:"Fuente mixta", shower:"Ducha urbana",
     toilet:"Aseo público", free:"gratis", paid:"de pago", wheelchair:"accesible ♿",
     drinkingToo:"con agua potable",
@@ -185,6 +191,9 @@ const I18N = {
     feels:"sentitzen da", nearWater:"Urik hurbilena",
     heatMsg:"Bero egiten du ({t}°). Itzal-korridoreei jarraitu eta ura sarri edan.",
     hintTxt:"Itzal-geruzak hiriko zuhaiztia (35.570 zuhaitz) eta gune berde ofizialak erakusten ditu: korridorerik freskoenak korrika egiteko edo paseatzeko.",
+    refuges:"Klima-aterpeak", refugesN:"klima-aterpe ofizial",
+    refuge:"Klima-aterpea", refInt:"Barruko aterpea (eraikina)", refExt:"Kanpoko aterpea (gune berdea)",
+    hours:"Ordutegia",
     fountain:"Edateko iturria", fountainMix:"Iturri mistoa", shower:"Hiri-dutxa",
     toilet:"Komun publikoa", free:"doakoa", paid:"ordainpekoa", wheelchair:"irisgarria ♿",
     drinkingToo:"edateko urarekin",
@@ -203,6 +212,9 @@ const I18N = {
     feels:"feels like", nearWater:"Nearest water",
     heatMsg:"It's hot ({t}°). Follow the shade corridors and drink often.",
     hintTxt:"The shade layer shows the city's 35,570 street trees and official green areas — the coolest corridors for running or walking.",
+    refuges:"Climate refuges", refugesN:"official climate refuges",
+    refuge:"Climate refuge", refInt:"Indoor refuge (building)", refExt:"Outdoor refuge (green area)",
+    hours:"Hours",
     fountain:"Drinking fountain", fountainMix:"Mixed fountain", shower:"Urban shower",
     toilet:"Public toilet", free:"free", paid:"paid", wheelchair:"wheelchair ♿",
     drinkingToo:"with drinking water",
@@ -227,13 +239,20 @@ function applyStatic() {
 function setLang(l) { lang = l; localStorage.setItem("fk-lang", l); applyStatic(); render(); renderWeather(); }
 
 /* ═══════════ Fuentes de datos ═══════════ */
-const WFS_FUENTES = "https://www.geobilbao.eus/geobilbao/Main"
-  + "?gsservice=Ls&gsrequest=WFS&idservice=OyS_Aguas"
+const WFS = (svc, layer) => "https://www.geobilbao.eus/geobilbao/Main"
+  + "?gsservice=Ls&gsrequest=WFS&idservice=" + svc
   + "&SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature"
-  + "&OUTPUTFORMAT=application/json&SRSNAME=EPSG:4326&TYPENAMES=OyS_Aguas:Fuentes";
+  + "&OUTPUTFORMAT=application/json&SRSNAME=EPSG:4326&TYPENAMES=" + svc + ":" + layer;
+const WFS_FUENTES = WFS("OyS_Aguas", "Fuentes");
+const WFS_REF_INT = WFS("Mam_CambioClimatico", "RefugioClimaticoInterior");
+const WFS_REF_EXT = WFS("Mam_CambioClimatico", "RefugioClimaticoExterior");
 const WMS_BASE = "https://www.geobilbao.eus/geobilbao/Main?gsservice=Ls&gsrequest=WMS&idservice=";
-const OVERPASS = "https://overpass-api.de/api/interpreter";
-const OVERPASS_Q = '[out:json][timeout:25];(node["amenity"="toilets"](43.21,-3.02,43.30,-2.85);way["amenity"="toilets"](43.21,-3.02,43.30,-2.85););out center;';
+const OVERPASS_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+const OVERPASS_Q = '[out:json][timeout:20];(node["amenity"="toilets"](43.21,-3.02,43.30,-2.85);way["amenity"="toilets"](43.21,-3.02,43.30,-2.85););out center;';
 const METEO = "https://api.open-meteo.com/v1/forecast?latitude=43.263&longitude=-2.935&current=temperature_2m,apparent_temperature&timezone=Europe%2FMadrid";
 const HEAT_ON = 27;          /* °C sensación para modo calor */
 const TOILETS_TTL = 7 * 24 * 3600 * 1000;
@@ -251,8 +270,8 @@ const wmsVerde = L.tileLayer.wms(WMS_BASE + "Mam_Biodiversidad", {
 const wmsArbolado = L.tileLayer.wms(WMS_BASE + "OyS_ParquesJardines", {
   layers: "Arbolado", format: "image/png", transparent: true, opacity: 0.55 });
 
-const gAgua = L.layerGroup(), gDucha = L.layerGroup(), gAseo = L.layerGroup();
-let fuentes = [], duchas = [], aseos = [], userMarker = null;
+const gAgua = L.layerGroup(), gDucha = L.layerGroup(), gAseo = L.layerGroup(), gRef = L.layerGroup();
+let fuentes = [], duchas = [], aseos = [], refugios = [], refExt = [], userMarker = null;
 
 const haversine = (a, b) => {
   const R = 6371000, r = Math.PI / 180;
@@ -274,6 +293,13 @@ function fuentePopup(f) {
     .filter(Boolean).join("<br>");
   return `<b>${type}</b><br><span class="prop">${loc}</span>`;
 }
+function refPopup(r) {
+  const rows = [];
+  if (r.horario) rows.push(`${t("hours")}: ${r.horario}`);
+  if (r.barrio) rows.push(`${t("barrio")}: ${cap(r.barrio)}`);
+  const kind = r.ext ? t("refExt") : t("refInt");
+  return `<b>❄️ ${r.nombre || t("refuge")}</b><br><span class="prop">${kind}${rows.length ? "<br>" + rows.join("<br>") : ""}</span>`;
+}
 function aseoPopup(a) {
   const tags = [];
   if (a.fee === "no") tags.push(t("free"));
@@ -286,23 +312,30 @@ function aseoPopup(a) {
 
 /* ═══════════ Render ═══════════ */
 function render() {
-  gAgua.clearLayers(); gDucha.clearLayers(); gAseo.clearLayers();
+  gAgua.clearLayers(); gDucha.clearLayers(); gAseo.clearLayers(); gRef.clearLayers();
   for (const f of fuentes)
     gAgua.addLayer(L.marker([f.lat, f.lng], { icon: mk("agua", "💧") }).bindPopup(() => fuentePopup(f)));
   for (const f of duchas)
     gDucha.addLayer(L.marker([f.lat, f.lng], { icon: mk("ducha", "🚿") }).bindPopup(() => fuentePopup(f)));
   for (const a of aseos)
     gAseo.addLayer(L.marker([a.lat, a.lng], { icon: mk("aseo", "🚻") }).bindPopup(() => aseoPopup(a)));
+  for (const p of refExt)
+    gRef.addLayer(L.geoJSON(p.geom, {
+      style: { color: "#0d9488", weight: 1.5, fillColor: "#14b8a6", fillOpacity: 0.18 },
+    }).bindPopup(() => refPopup(p)));
+  for (const r of refugios)
+    gRef.addLayer(L.marker([r.lat, r.lng], { icon: mk("ref", "❄️") }).bindPopup(() => refPopup(r)));
 
   document.getElementById("nAgua").textContent = fuentes.length || "–";
   document.getElementById("nDucha").textContent = duchas.length || "–";
   document.getElementById("nAseo").textContent = aseos.length || "–";
+  document.getElementById("nRef").textContent = (refugios.length + refExt.length) || "–";
   applyLayers();
 }
 
 function applyLayers() {
   const on = (box, layer) => document.getElementById(box).checked ? map.addLayer(layer) : map.removeLayer(layer);
-  on("fAgua", gAgua); on("fDucha", gDucha); on("fAseo", gAseo);
+  on("fAgua", gAgua); on("fDucha", gDucha); on("fAseo", gAseo); on("fRef", gRef);
   if (document.getElementById("fSombra").checked) { map.addLayer(wmsVerde); map.addLayer(wmsArbolado); }
   else { map.removeLayer(wmsVerde); map.removeLayer(wmsArbolado); }
 }
@@ -316,9 +349,9 @@ function setPreset(agua, ducha, aseo, sombra, btn) {
   document.getElementById("pTour").setAttribute("aria-pressed", String(btn === "tour"));
   applyLayers();
 }
-document.getElementById("pRun").onclick = () => setPreset(true, true, false, true, "run");
-document.getElementById("pTour").onclick = () => setPreset(true, false, true, false, "tour");
-for (const id of ["fAgua", "fDucha", "fAseo", "fSombra"])
+document.getElementById("pRun").onclick = () => { setPreset(true, true, false, true, "run"); document.getElementById("fRef").checked = false; applyLayers(); };
+document.getElementById("pTour").onclick = () => { setPreset(true, false, true, false, "tour"); document.getElementById("fRef").checked = true; applyLayers(); };
+for (const id of ["fAgua", "fDucha", "fAseo", "fSombra", "fRef"])
   document.getElementById(id).addEventListener("change", () => {
     document.getElementById("pRun").setAttribute("aria-pressed", "false");
     document.getElementById("pTour").setAttribute("aria-pressed", "false");
@@ -345,27 +378,61 @@ async function loadFuentes() {
   render();
 }
 
+async function loadRefugios() {
+  try {
+    const [ji, je] = await Promise.all([
+      fetch(WFS_REF_INT, { cache: "no-store" }).then(r => r.json()),
+      fetch(WFS_REF_EXT, { cache: "no-store" }).then(r => r.json()),
+    ]);
+    refugios = (ji.features || []).filter(f => f.geometry).map(f => {
+      const { lat, lng } = firstCoord(f.geometry);
+      return { lat, lng, nombre: f.properties.Nombre, horario: f.properties.Horario || "",
+               barrio: f.properties.Barrio || "", ext: false };
+    });
+    refExt = (je.features || []).filter(f => f.geometry).map(f => ({
+      geom: f.geometry, nombre: f.properties.Nombre,
+      horario: "", barrio: f.properties.Barrio || "", ext: true,
+    }));
+    try { localStorage.setItem("fk-refugios", JSON.stringify({ when: Date.now(), refugios, refExt })); } catch (e) {}
+  } catch (e) {
+    try {
+      const s = JSON.parse(localStorage.getItem("fk-refugios") || "null");
+      if (s) { refugios = s.refugios; refExt = s.refExt; }
+    } catch (err) {}
+  }
+  render();
+}
+
 async function loadAseos() {
   try {
     const s = JSON.parse(localStorage.getItem("fk-aseos") || "null");
-    if (s && Date.now() - s.when < TOILETS_TTL) { aseos = s.aseos; render(); return; }
+    if (s && s.aseos.length && Date.now() - s.when < TOILETS_TTL) { aseos = s.aseos; render(); return; }
   } catch (e) {}
-  try {
-    const j = await fetch(OVERPASS, {
-      method: "POST",
-      body: "data=" + encodeURIComponent(OVERPASS_Q),
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    }).then(r => r.json());
-    aseos = (j.elements || []).map(e => ({
-      lat: e.lat ?? e.center?.lat, lng: e.lon ?? e.center?.lon,
-      name: e.tags?.name || "", fee: e.tags?.fee || "",
-      wheelchair: e.tags?.wheelchair || "", drinking: e.tags?.drinking_water || "",
-    })).filter(a => a.lat && a.lng);
-    try { localStorage.setItem("fk-aseos", JSON.stringify({ when: Date.now(), aseos })); } catch (e) {}
-  } catch (e) {
-    try { const s = JSON.parse(localStorage.getItem("fk-aseos") || "null"); if (s) aseos = s.aseos; } catch (err) {}
+  /* espejos Overpass, uno tras otro */
+  for (const base of OVERPASS_MIRRORS) {
+    try {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 22000);
+      const j = await fetch(base + "?data=" + encodeURIComponent(OVERPASS_Q), { signal: ctl.signal })
+        .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+      clearTimeout(timer);
+      const list = (j.elements || []).map(e => ({
+        lat: e.lat ?? (e.center && e.center.lat), lng: e.lon ?? (e.center && e.center.lon),
+        name: (e.tags && e.tags.name) || "", fee: (e.tags && e.tags.fee) || "",
+        wheelchair: (e.tags && e.tags.wheelchair) || "", drinking: (e.tags && e.tags.drinking_water) || "",
+      })).filter(a => a.lat && a.lng);
+      if (list.length) {
+        aseos = list;
+        try { localStorage.setItem("fk-aseos", JSON.stringify({ when: Date.now(), aseos })); } catch (e) {}
+        render();
+        return;
+      }
+    } catch (e) { /* siguiente espejo */ }
   }
+  /* nada: usar caché aunque caducada, y reintentar en 60 s */
+  try { const s = JSON.parse(localStorage.getItem("fk-aseos") || "null"); if (s) aseos = s.aseos; } catch (err) {}
   render();
+  setTimeout(loadAseos, 60000);
 }
 
 let weather = null;
@@ -384,6 +451,7 @@ function renderWeather() {
     heat.textContent = "☀️ " + t("heatMsg").replace("{t}", F);
     heat.style.display = "block";
     document.getElementById("fSombra").checked = true;
+    document.getElementById("fRef").checked = true;
     applyLayers();
   } else heat.style.display = "none";
 }
@@ -415,6 +483,7 @@ document.getElementById("locBtn").onclick = () => {
 applyStatic();
 applyLayers();
 loadFuentes();
+loadRefugios();
 loadAseos();
 loadWeather();
 setInterval(loadWeather, 15 * 60 * 1000);

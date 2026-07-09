@@ -14,13 +14,17 @@ dónde hay sombra y dónde encontrar un aseo en Bilbao.
 - 🚻 **~114 aseos públicos** (OpenStreetMap vía Overpass, caché local 7 días, con etiquetas gratis/de pago/accesible)
 - 🌳 **Sombra**: arbolado municipal (35.570 árboles) + zonas verdes oficiales, servidos como WMS
   (`OyS_ParquesJardines:Arbolado`, `Mam_Biodiversidad:VerdeUrbano`)
+- ❄️ **141 refugios climáticos oficiales**: 75 interiores (con horario) + 66 zonas verdes
+  exteriores (WFS `Mam_CambioClimatico:RefugioClimaticoInterior/Exterior`) — la red municipal
+  contra olas de calor
 
 ## Funciones
 
 - **Modo corredor** (agua + duchas + sombra) y **modo turista** (agua + aseos) — presets de un toque
 - **«Agua más cercana»**: geolocalización → vuela a la fuente más próxima con la distancia
-- **Modo calor**: con sensación térmica ≥ 27° (Open-Meteo) aparece el aviso y se activa
-  la capa de sombra automáticamente
+- **Modo calor**: con sensación térmica ≥ 27° (Open-Meteo) aparece el aviso y se activan
+  automáticamente las capas de sombra y refugios climáticos
+- **Aseos robustos**: tres espejos de Overpass con reintento automático y caché local
 - ES / EU / EN, PWA instalable, funciona sin conexión con los últimos datos guardados
 - Paleta: verdes, amarillos, turquesas y celestes; leyenda y estadísticas bajo el mapa
 

@@ -3,7 +3,7 @@
    Teselas (OSM + WMS sombra): caché primero con relleno en segundo plano */
 "use strict";
 
-const VERSION = "fk-v1";
+const VERSION = "fk-v2";
 const SHELL_CACHE = VERSION + "-shell";
 const DATA_CACHE = VERSION + "-data";
 
