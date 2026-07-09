@@ -98,6 +98,20 @@
     padding:10px 16px;font-size:13.5px;font-weight:650;cursor:pointer;
     box-shadow:0 2px 8px rgba(3,105,161,.4);display:flex;gap:6px;align-items:center}
   #locBtn:active{transform:scale(.97)}
+  #gpsBtn{position:absolute;right:10px;bottom:64px;z-index:800;
+    background:var(--surface);color:var(--ink);border:1.5px solid var(--line);border-radius:999px;
+    width:42px;height:42px;font-size:18px;cursor:pointer;
+    box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center}
+  #gpsBtn[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+  #gpsBtn:active{transform:scale(.95)}
+
+  /* ── punto "estás aquí" ── */
+  .me-wrap{position:relative;width:18px;height:18px}
+  .me-dot{position:absolute;inset:0;border-radius:50%;background:var(--sky);
+    border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.45)}
+  .me-ring{position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--sky);
+    opacity:.7;animation:mepulse 2s ease-out infinite}
+  @keyframes mepulse{0%{transform:scale(.5);opacity:.8}80%{transform:scale(1.6);opacity:0}100%{opacity:0}}
 
   /* ── Leyenda bajo el mapa ── */
   #legend{background:var(--surface);border-bottom:1px solid var(--line);
@@ -170,6 +184,7 @@
 
 <div id="mapwrap">
   <div id="map" role="application" aria-label="Map"></div>
+  <button id="gpsBtn" aria-pressed="false" title="Mi ubicación" aria-label="My location">📍</button>
   <button id="locBtn">💧 <span data-i18n="nearWater">Agua más cercana</span></button>
 </div>
 
@@ -540,26 +555,66 @@ function renderWeather() {
   } else heat.style.display = "none";
 }
 
+/* ═══════════ Mi ubicación (punto "estás aquí") ═══════════ */
+let watchId = null, meMarker = null, meCircle = null, lastPos = null, firstFix = true;
+const meIcon = L.divIcon({
+  className: "", html: '<div class="me-wrap"><div class="me-ring"></div><div class="me-dot"></div></div>',
+  iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -10],
+});
+function onFix(pos) {
+  lastPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  const acc = pos.coords.accuracy || 0;
+  if (!meMarker) {
+    meMarker = L.marker([lastPos.lat, lastPos.lng], { icon: meIcon, zIndexOffset: 1000 })
+      .addTo(map).bindPopup(() => `<b>${t("youAre")}</b>`);
+    meCircle = L.circle([lastPos.lat, lastPos.lng], {
+      radius: acc, color: "var(--sky)", weight: 1, fillColor: "var(--sky)", fillOpacity: 0.12,
+    }).addTo(map);
+  } else {
+    meMarker.setLatLng([lastPos.lat, lastPos.lng]);
+    meCircle.setLatLng([lastPos.lat, lastPos.lng]).setRadius(acc);
+  }
+  if (firstFix) { map.flyTo([lastPos.lat, lastPos.lng], Math.max(map.getZoom(), 16)); firstFix = false; }
+}
+function gpsStop() {
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (meMarker) { map.removeLayer(meMarker); meMarker = null; }
+  if (meCircle) { map.removeLayer(meCircle); meCircle = null; }
+  lastPos = null; firstFix = true;
+  document.getElementById("gpsBtn").setAttribute("aria-pressed", "false");
+}
+document.getElementById("gpsBtn").onclick = () => {
+  if (watchId !== null) { gpsStop(); return; }
+  if (!("geolocation" in navigator)) { alert(t("geoErr")); return; }
+  document.getElementById("gpsBtn").setAttribute("aria-pressed", "true");
+  watchId = navigator.geolocation.watchPosition(onFix,
+    () => { alert(t("geoErr")); gpsStop(); },
+    { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 });
+};
+
 /* ═══════════ Agua más cercana ═══════════ */
+function nearestWater(me) {
+  let best = null, bd = Infinity;
+  for (const f of [...fuentes, ...(document.getElementById("fDucha").checked ? duchas : [])]) {
+    const d = haversine(me, f);
+    if (d < bd) { bd = d; best = f; }
+  }
+  if (!best) return;
+  document.getElementById("fAgua").checked = true; applyLayers();
+  map.fitBounds(L.latLngBounds([[me.lat, me.lng], [best.lat, best.lng]]).pad(0.35));
+  L.popup().setLatLng([best.lat, best.lng])
+    .setContent(fuentePopup(best) + `<br><span class="prop">📍 ${t("away").replace("{d}", Math.round(bd))}</span>`)
+    .openOn(map);
+}
 document.getElementById("locBtn").onclick = () => {
   if (!fuentes.length) { alert(t("noWater")); return; }
+  if (lastPos) { nearestWater(lastPos); return; }   /* GPS ya activo: al instante */
   navigator.geolocation.getCurrentPosition(pos => {
     const me = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    let best = null, bd = Infinity;
-    for (const f of [...fuentes, ...(document.getElementById("fDucha").checked ? duchas : [])]) {
-      const d = haversine(me, f);
-      if (d < bd) { bd = d; best = f; }
-    }
-    if (!best) return;
     if (userMarker) map.removeLayer(userMarker);
-    userMarker = L.circleMarker([me.lat, me.lng], {
-      radius: 8, color: "#fff", weight: 2.5, fillColor: "#0f766e", fillOpacity: 1,
-    }).addTo(map).bindPopup(`<b>${t("youAre")}</b>`);
-    document.getElementById("fAgua").checked = true; applyLayers();
-    map.fitBounds(L.latLngBounds([[me.lat, me.lng], [best.lat, best.lng]]).pad(0.35));
-    L.popup().setLatLng([best.lat, best.lng])
-      .setContent(fuentePopup(best) + `<br><span class="prop">📍 ${t("away").replace("{d}", Math.round(bd))}</span>`)
-      .openOn(map);
+    userMarker = L.marker([me.lat, me.lng], { icon: meIcon, zIndexOffset: 1000 })
+      .addTo(map).bindPopup(() => `<b>${t("youAre")}</b>`);
+    nearestWater(me);
   }, () => alert(t("geoErr")), { enableHighAccuracy: true, timeout: 10000 });
 };
 
