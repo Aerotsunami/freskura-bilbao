@@ -3,7 +3,7 @@
    Teselas (OSM + WMS sombra): caché primero con relleno en segundo plano */
 "use strict";
 
-const VERSION = "fk-v2";
+const VERSION = "fk-v3";
 const SHELL_CACHE = VERSION + "-shell";
 const DATA_CACHE = VERSION + "-data";
 
@@ -56,8 +56,8 @@ self.addEventListener("fetch", (e) => {
 
   if (e.request.method !== "GET") return;
 
-  /* Teselas OSM + WMS: caché primero */
-  if (url.hostname.endsWith("tile.openstreetmap.org") ||
+  /* Teselas CARTO + WMS: caché primero */
+  if (url.hostname.endsWith("basemaps.cartocdn.com") ||
       (url.hostname === "www.geobilbao.eus" && url.search.includes("WMS"))) {
     e.respondWith(
       caches.match(e.request).then((hit) =>

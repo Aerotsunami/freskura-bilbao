@@ -5,30 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Freskura — agua, sombra y aseos en Bilbao</title>
 <meta name="description" content="Fuentes de agua potable, duchas, aseos públicos y sombra de Bilbao en un mapa. Para gente corredora y turista. Datos abiertos del Ayuntamiento de Bilbao y OpenStreetMap.">
-<meta name="theme-color" content="#0d9488">
+<meta name="theme-color" content="#11554e">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  /* ── Paleta: verdes, amarillos, turquesas y celestes ── */
+  /* ── Paleta nocturna: verdes, amarillos, turquesas y celestes ── */
   :root{
-    --bg:#f0f7f3;            /* menta muy claro          */
-    --surface:#ffffff;
-    --ink:#173d33;            /* verde bosque oscuro      */
-    --muted:#5d7a70;
-    --line:#d9ebe2;
-    --teal:#0d9488;           /* turquesa principal       */
-    --teal-deep:#0f766e;
-    --sky:#0ea5e9;            /* celeste (agua)           */
-    --sky-deep:#0369a1;
-    --cyan:#06b6d4;           /* duchas                   */
-    --amber:#f59e0b;          /* amarillo (aseos)         */
-    --amber-deep:#b45309;
+    --bg:#0b1512;             /* verde-negro profundo     */
+    --surface:#132019;        /* tarjetas                 */
+    --ink:#e8f5ee;            /* texto claro menta        */
+    --muted:#96b3a6;
+    --line:#24392f;
+    --teal:#14b8a6;           /* turquesa principal       */
+    --teal-deep:#5eead4;      /* turquesa claro (texto)   */
+    --sky:#38bdf8;            /* celeste (agua)           */
+    --sky-deep:#7dd3fc;
+    --cyan:#22d3ee;           /* duchas                   */
+    --amber:#fbbf24;          /* amarillo (aseos)         */
+    --amber-deep:#fcd34d;
     --leaf:#4ade80;           /* verde hoja (sombra)      */
-    --leaf-deep:#15803d;
+    --leaf-deep:#86efac;
     --radius:14px;
-    --shadow:0 1px 4px rgba(13,79,66,.14);
+    --shadow:0 1px 5px rgba(0,0,0,.45);
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);
@@ -36,21 +36,21 @@
     -webkit-font-smoothing:antialiased}
   body{display:flex;flex-direction:column;min-height:100vh}
 
-  header{background:linear-gradient(120deg,var(--teal-deep) 0%,var(--teal) 45%,var(--sky) 100%);
-    color:#f0fdfa;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header{background:linear-gradient(120deg,#0e3d38 0%,#11554e 45%,#0a4a6e 100%);
+    color:#ccfbf1;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.3px}
   header .sub{font-size:11.5px;opacity:.85;display:block;font-weight:400}
   .lang{display:flex;border:1px solid rgba(240,253,250,.45);border-radius:8px;overflow:hidden;margin-left:auto}
   .lang button{background:none;border:none;color:#f0fdfa;padding:4px 10px;font-size:12.5px;cursor:pointer;font-weight:600}
-  .lang button[aria-pressed="true"]{background:#f0fdfa;color:var(--teal-deep)}
+  .lang button[aria-pressed="true"]{background:#ccfbf1;color:#0e3d38}
   #tempChip{background:rgba(240,253,250,.18);border:1px solid rgba(240,253,250,.35);
     border-radius:999px;padding:3px 12px;font-size:12.5px;font-weight:600;white-space:nowrap}
 
-  #heat{display:none;background:#fefce8;border-bottom:1px solid #fde68a;color:#854d0e;
+  #heat{display:none;background:#2a2108;border-bottom:1px solid #4d3f10;color:#fcd34d;
     padding:8px 16px;font-size:13px;text-align:center}
 
   #mapwrap{position:relative}
-  #map{height:56vh;min-height:340px;width:100%;background:#e2efe8}
+  #map{height:56vh;min-height:340px;width:100%;background:#0e1a16}
   @media(min-width:900px){#map{height:62vh}}
   #locBtn{position:absolute;right:10px;bottom:14px;z-index:800;
     background:var(--sky);color:#fff;border:none;border-radius:999px;
@@ -64,14 +64,14 @@
     font-size:13.5px;box-shadow:var(--shadow);position:relative;z-index:500}
   #legend label{display:flex;align-items:center;gap:6px;cursor:pointer}
   #legend input{accent-color:var(--teal)}
-  .dot{width:13px;height:13px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1.5px var(--line)}
+  .dot{width:13px;height:13px;border-radius:50%;flex:none;border:2px solid var(--surface);box-shadow:0 0 0 1.5px var(--line)}
   .dot.agua{background:var(--sky)} .dot.ducha{background:var(--cyan)}
   .dot.aseo{background:var(--amber)} .dot.sombra{background:var(--leaf)}
   .dot.ref{background:var(--teal)}
   .sep{width:1px;height:20px;background:var(--line)}
   .preset{border:1.5px solid var(--teal);background:none;color:var(--teal-deep);
     border-radius:999px;padding:4px 13px;font-size:12.5px;font-weight:650;cursor:pointer}
-  .preset[aria-pressed="true"]{background:var(--teal);color:#fff}
+  .preset[aria-pressed="true"]{background:var(--teal);color:#06251f}
 
   main{flex:1;max-width:1080px;width:100%;margin:0 auto;padding:16px}
   h2{font-size:15px;margin:14px 0 10px;font-weight:700}
@@ -84,22 +84,30 @@
   .card.ducha .num{color:var(--cyan)}
   .card.aseo .num{color:var(--amber-deep)}
   .card.temp .num{color:var(--teal-deep)}
-  #hint{background:linear-gradient(120deg,#ecfdf5,#f0f9ff);border:1px solid var(--line);
+  #hint{background:linear-gradient(120deg,#11251c,#0d2334);border:1px solid var(--line);
     border-radius:var(--radius);padding:12px 16px;font-size:13.5px;margin-top:12px;line-height:1.55}
 
   footer{font-size:11px;color:var(--muted);text-align:center;padding:14px 16px 22px;line-height:1.6}
   footer a{color:var(--teal-deep);text-decoration:none}
 
   .mk{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
-    border-radius:50%;background:#fff;font-size:13px;
-    box-shadow:0 1px 4px rgba(13,79,66,.35)}
+    border-radius:50%;background:#132019;font-size:13px;
+    box-shadow:0 1px 4px rgba(0,0,0,.6)}
   .mk.agua{border:2.5px solid var(--sky)} .mk.ducha{border:2.5px solid var(--cyan)}
   .mk.aseo{border:2.5px solid var(--amber)} .mk.ref{border:2.5px solid var(--teal)}
   .leaflet-popup-content{font-size:13px;line-height:1.5;margin:10px 14px}
   .leaflet-popup-content b{font-size:14px}
   .prop{color:var(--muted)}
-  .tag{display:inline-block;background:#ecfdf5;border:1px solid var(--line);border-radius:6px;
-    padding:1px 7px;font-size:11.5px;margin:2px 3px 0 0;color:var(--ink)}
+  .tag{display:inline-block;background:#1b2f26;border:1px solid var(--line);border-radius:6px;
+    padding:1px 7px;font-size:11.5px;margin:2px 3px 0 0;color:#cde9dc}
+
+  /* ── Leaflet en oscuro ── */
+  .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--surface);color:var(--ink)}
+  .leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+  .leaflet-bar a{background:var(--surface);color:var(--ink);border-bottom:1px solid var(--line)}
+  .leaflet-bar a:hover{background:#1b2f26}
+  .leaflet-control-attribution{background:rgba(11,21,18,.75)!important;color:var(--muted)}
+  .leaflet-control-attribution a{color:var(--teal-deep)}
 </style>
 </head>
 <body>
@@ -151,6 +159,7 @@
   <a href="https://www.geobilbao.eus" target="_blank" rel="noopener">GeoBilbao · Ayuntamiento de Bilbao</a>
   (fuentes, duchas, arbolado, zonas verdes) ·
   <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (aseos, mapa) ·
+  <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> (teselas oscuras) ·
   <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (tiempo)
 </footer>
 
@@ -260,8 +269,9 @@ const TOILETS_TTL = 7 * 24 * 3600 * 1000;
 /* ═══════════ Mapa ═══════════ */
 const map = L.map("map", { zoomControl: true }).setView([43.2609, -2.9349], 14);
 map.attributionControl.setPrefix(false);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19, attribution: "© OpenStreetMap contributors",
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 19, subdomains: "abcd",
+  attribution: "© OpenStreetMap contributors © CARTO",
 }).addTo(map);
 
 /* Sombra: zonas verdes + arbolado municipales vía WMS */
