@@ -163,6 +163,7 @@
   .leaflet-bar a:hover{background:var(--hover)}
   .leaflet-control-attribution{background:var(--attrib-bg)!important;color:var(--muted)}
   .leaflet-control-attribution a{color:var(--teal-deep)}
+.tiles-dark{filter:invert(1) hue-rotate(180deg) brightness(.80) contrast(1.05) saturate(.7)}
 </style>
 </head>
 <body>
@@ -216,7 +217,7 @@
   <a href="https://www.geobilbao.eus" target="_blank" rel="noopener">GeoBilbao · Ayuntamiento de Bilbao</a>
   (fuentes, duchas, arbolado, zonas verdes) ·
   <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (aseos, mapa) ·
-  <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> (teselas oscuras) ·
+  
   <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (tiempo)
 </footer>
 
@@ -338,8 +339,8 @@ const TOILETS_TTL = 7 * 24 * 3600 * 1000;
 const map = L.map("map", { zoomControl: true }).setView([43.2609, -2.9349], 14);
 map.attributionControl.setPrefix(false);
 const cartoTiles = style => L.tileLayer(
-  "https://{s}.basemaps.cartocdn.com/" + style + "/{z}/{x}/{y}{r}.png",
-  { maxZoom: 19, subdomains: "abcd", attribution: "© OpenStreetMap contributors © CARTO" });
+  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  { maxZoom: 19, className: /dark/.test(style) ? "tiles-dark" : "", attribution: "© OpenStreetMap contributors" });
 const tileLight = cartoTiles("rastertiles/voyager");
 const tileDark = cartoTiles("dark_all");
 
